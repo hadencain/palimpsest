@@ -454,6 +454,40 @@ function renderFrame() {
   animFrameId = requestAnimationFrame(renderFrame);
 }
 
+function updateVisualizer(opacities, masterTime) {
+  for (let i = 0; i < 5; i++) {
+    const bar = document.getElementById(`bar-${i}`);
+    if (bar) bar.style.height = `${(opacities[i] * 100).toFixed(1)}%`;
+
+    const dt = document.getElementById(`dbg-t-${i}`);
+    const da = document.getElementById(`dbg-a-${i}`);
+    if (dt) {
+      const t = (i === 2) ? masterTime : Math.max(0, Math.min(masterTime + (i - 2) * temporalOffset, duration));
+      dt.textContent = `t: ${t.toFixed(2)}s`;
+    }
+    if (da) da.textContent = `α: ${opacities[i].toFixed(2)}`;
+  }
+
+  // Keep the NOW floor hairline aligned with presentFloor
+  const floor = document.getElementById('now-floor');
+  if (floor) {
+    // labelHeight ≈ 12px + 4px gap, track is (60px - 22px) = 38px
+    floor.style.bottom = `calc(22px + ${presentFloor * 100}%)`;
+  }
+}
+
+function updateTimecode(t) {
+  const fmt = s => {
+    const m = Math.floor(s / 60);
+    const sec = (s % 60).toFixed(1).padStart(4, '0');
+    return `${String(m).padStart(2, '0')}:${sec}`;
+  };
+  document.getElementById('timecode').textContent =
+    `${fmt(t)} / ${fmt(duration)}`;
+  document.getElementById('s-offset').textContent = `${temporalOffset.toFixed(1)}s`;
+  document.getElementById('s-layers').textContent = `${layerCount}`;
+}
+
 // ============================================================
 // UI
 // ============================================================

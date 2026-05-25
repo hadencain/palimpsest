@@ -456,8 +456,9 @@ function renderFrame() {
 
 function updateVisualizer(opacities, masterTime) {
   for (let i = 0; i < 5; i++) {
+    const op = isNaN(opacities[i]) ? 0 : opacities[i];
     const bar = document.getElementById(`bar-${i}`);
-    if (bar) bar.style.height = `${(opacities[i] * 100).toFixed(1)}%`;
+    if (bar) bar.style.height = `${(op * 100).toFixed(1)}%`;
 
     const dt = document.getElementById(`dbg-t-${i}`);
     const da = document.getElementById(`dbg-a-${i}`);
@@ -465,7 +466,7 @@ function updateVisualizer(opacities, masterTime) {
       const t = (i === 2) ? masterTime : Math.max(0, Math.min(masterTime + (i - 2) * temporalOffset, duration));
       dt.textContent = `t: ${t.toFixed(2)}s`;
     }
-    if (da) da.textContent = `α: ${opacities[i].toFixed(2)}`;
+    if (da) da.textContent = `α: ${op.toFixed(2)}`;
   }
 
   // Keep the NOW floor hairline aligned with presentFloor

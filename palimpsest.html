@@ -337,9 +337,54 @@ function setupLayers(src) {
   }, { once: true });
 }
 
+function loadFile(file) {
+  if (!file || !file.type.startsWith('video/')) return;
+
+  const src = URL.createObjectURL(file);
+  setupLayers(src);
+
+  document.getElementById('canvas-hint').style.display = 'none';
+  document.getElementById('btn-export').classList.remove('hidden');
+  setStatus('LOADED');
+}
+
+function setStatus(text) {
+  document.getElementById('s-state').textContent = text;
+}
+
 // ============================================================
 // UI
 // ============================================================
+
+// --- File picker ---
+const fileInput = document.createElement('input');
+fileInput.type   = 'file';
+fileInput.accept = 'video/*';
+fileInput.style.display = 'none';
+document.body.appendChild(fileInput);
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) loadFile(fileInput.files[0]);
+});
+
+document.getElementById('btn-load').addEventListener('click', () => fileInput.click());
+
+// --- Drag and drop ---
+canvasWrap.addEventListener('dragover', e => {
+  e.preventDefault();
+  canvasWrap.style.outline = '1px solid #555';
+});
+
+canvasWrap.addEventListener('dragleave', () => {
+  canvasWrap.style.outline = '';
+});
+
+canvasWrap.addEventListener('drop', e => {
+  e.preventDefault();
+  canvasWrap.style.outline = '';
+  const file = e.dataTransfer.files[0];
+  if (file) loadFile(file);
+});
 </script>
 </body>
 </html>

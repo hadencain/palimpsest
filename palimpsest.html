@@ -555,6 +555,35 @@ document.getElementById('btn-debug').addEventListener('click', () => {
   panel.classList.toggle('visible');
   document.getElementById('btn-debug').classList.toggle('active');
 });
+
+// --- Temporal Offset: slider range 1–50, value maps to 0.1–5.0s (divide by 10) ---
+document.getElementById('ctrl-offset').addEventListener('input', function() {
+  temporalOffset = this.value / 10;
+  document.getElementById('val-offset').textContent = `${temporalOffset.toFixed(1)}s`;
+  document.getElementById('s-offset').textContent   = `${temporalOffset.toFixed(1)}s`;
+  // Trigger immediate re-sync on next tick
+  if (isPlaying) syncLayers();
+});
+
+// --- Present Floor: slider range 0–100, value / 100 ---
+document.getElementById('ctrl-floor').addEventListener('input', function() {
+  presentFloor = this.value / 100;
+  document.getElementById('val-floor').textContent = presentFloor.toFixed(2);
+});
+
+// --- FFT Smoothing: slider range 0–95, value / 100 ---
+document.getElementById('ctrl-smooth').addEventListener('input', function() {
+  const v = this.value / 100;
+  document.getElementById('val-smooth').textContent = v.toFixed(2);
+  if (analyser) analyser.smoothingTimeConstant = v;
+});
+
+// --- Layer Count: slider 0=3layers, 1=5layers ---
+document.getElementById('ctrl-layers').addEventListener('input', function() {
+  layerCount = this.value === '1' ? 5 : 3;
+  document.getElementById('val-layers').textContent = `${layerCount}`;
+  document.getElementById('s-layers').textContent   = `${layerCount}`;
+});
 </script>
 </body>
 </html>

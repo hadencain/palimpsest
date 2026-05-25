@@ -377,6 +377,82 @@ function getBandEnergy(startBin, endBin) {
   return sum / ((endBin - startBin + 1) * 255); // normalized 0..1
 }
 
+function getActiveLayers() {
+  if (layerCount === 5) {
+    return [0, 1, 2, 3, 4].map(i => ({ i, offset: (i - 2) * temporalOffset }));
+  }
+  // layerCount === 3: use layers 0, 2, 4 mapped to offsets -T, 0, +T
+  return [
+    { i: 0, offset: -temporalOffset },
+    { i: 2, offset: 0 },
+    { i: 4, offset:  temporalOffset },
+  ];
+}
+
+function syncLayers() {
+  const masterTime = layers[2].currentTime;
+  const active = getActiveLayers();
+  active.forEach(({ i, offset }) => {
+    if (i === 2) return; // present layer drives itself
+    const target = Math.max(0, Math.min(masterTime + offset, duration));
+    // Only write if meaningfully off — avoids thrashing
+    if (Math.abs(layers[i].currentTime - target) > 0.1) {
+      layers[i].currentTime = target;
+    }
+  });
+}
+
+function renderFrame() {
+  if (!isPlaying) return;
+
+  frameCount++;
+  const masterTime = layers[2].currentTime;
+
+  // Resize canvas to container if needed
+  const w = canvasWrap.clientWidth;
+  const h = canvasWrap.clientHeight;
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width  = w;
+    canvas.height = h;
+  }
+
+  // Pull frequency data
+  if (analyser) analyser.getByteFrequencyData(freqData);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const active = getActiveLayers();
+  const opacities = [0, 0, 0, 0, 0];
+
+  active.forEach(({ i, offset }) => {
+    const [s, e] = BANDS[i];
+    let opacity = analyser ? getBandEnergy(s, e) : 0;
+    if (i === 2) opacity = Math.max(opacity, presentFloor);
+    opacities[i] = opacity;
+
+    ctx.globalAlpha = opacity;
+    ctx.drawImage(layers[i], 0, 0, canvas.width, canvas.height);
+  });
+
+  ctx.globalAlpha = 1.0;
+
+  // Drift correction every 30 frames
+  if (frameCount % 30 === 0) syncLayers();
+
+  // Update UI
+  updateVisualizer(opacities, masterTime);
+  updateTimecode(masterTime);
+
+  // End condition
+  if (masterTime >= duration && duration > 0) {
+    pausePlayback();
+    setStatus('DONE');
+    return;
+  }
+
+  animFrameId = requestAnimationFrame(renderFrame);
+}
+
 // ============================================================
 // UI
 // ============================================================

@@ -352,6 +352,31 @@ function setStatus(text) {
   document.getElementById('s-state').textContent = text;
 }
 
+function setupAudio() {
+  if (audioCtx) return; // already set up
+
+  audioCtx = new AudioContext();
+
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.smoothingTimeConstant = 0.85;
+  freqData = new Uint8Array(analyser.frequencyBinCount); // 256 bins
+
+  const src = audioCtx.createMediaElementSource(layers[2]);
+  src.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  // Secondary branch for recording
+  recordDest = audioCtx.createMediaStreamDestination();
+  analyser.connect(recordDest);
+}
+
+function getBandEnergy(startBin, endBin) {
+  let sum = 0;
+  for (let b = startBin; b <= endBin; b++) sum += freqData[b];
+  return sum / ((endBin - startBin + 1) * 255); // normalized 0..1
+}
+
 // ============================================================
 // UI
 // ============================================================

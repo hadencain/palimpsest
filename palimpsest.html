@@ -430,6 +430,7 @@ function renderFrame() {
     if (i === 2) opacity = Math.max(opacity, presentFloor);
     opacities[i] = opacity;
 
+    if (layers[i].readyState < 2) return;
     ctx.globalAlpha = opacity;
     ctx.drawImage(layers[i], 0, 0, canvas.width, canvas.height);
   });

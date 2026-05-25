@@ -270,9 +270,72 @@ canvas { display: block; width: 100%; height: 100%; }
 // STATE
 // ============================================================
 
+// Params (live-updatable)
+let temporalOffset = 1.0;   // seconds between adjacent layers
+let presentFloor   = 0.30;  // minimum opacity for layer 2
+let layerCount     = 5;     // 3 or 5
+
+// Playback
+let duration    = 0;
+let frameCount  = 0;
+let animFrameId = null;
+let isPlaying   = false;
+
+// Recording
+let isRecording  = false;
+let mediaRecorder = null;
+let recordChunks  = [];
+
+// Audio
+let audioCtx   = null;
+let analyser   = null;
+let freqData   = null;
+let recordDest = null;
+
+// Layers — 5 HTMLVideoElement instances, created in setupLayers()
+let layers = [];
+
+// Frequency band definitions: [startBin, endBin] per layer index
+const BANDS = [
+  [0,   10],   // 0: PAST-2  bass
+  [11,  40],   // 1: PAST-1  low-mid
+  [41,  100],  // 2: NOW     mid
+  [101, 160],  // 3: FUT-1   high-mid
+  [161, 220],  // 4: FUT-2   treble
+];
+
+// DOM refs
+const canvas     = document.getElementById('canvas');
+const ctx        = canvas.getContext('2d');
+const canvasWrap = document.getElementById('canvas-wrap');
+
 // ============================================================
 // ENGINE
 // ============================================================
+
+function setupLayers(src) {
+  // Tear down any previous layers
+  layers.forEach(v => { v.pause(); v.src = ''; });
+
+  layers = Array.from({ length: 5 }, (_, i) => {
+    const v = document.createElement('video');
+    v.src     = src;
+    v.muted   = true;
+    v.preload = 'auto';
+    return v;
+  });
+
+  // Only the present layer (index 2) produces audio
+  layers[2].muted = false;
+
+  // Once metadata loads on layer 2, store duration
+  layers[2].addEventListener('loadedmetadata', () => {
+    duration = layers[2].duration;
+    // Size canvas to video's natural dimensions
+    canvas.width  = layers[2].videoWidth  || canvasWrap.clientWidth;
+    canvas.height = layers[2].videoHeight || canvasWrap.clientHeight;
+  }, { once: true });
+}
 
 // ============================================================
 // UI

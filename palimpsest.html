@@ -489,6 +489,28 @@ function updateTimecode(t) {
   document.getElementById('s-layers').textContent = `${layerCount}`;
 }
 
+function startPlayback() {
+  if (!layers.length || isPlaying) return;
+
+  setupAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  layers.forEach(v => v.play().catch(() => {}));
+  isPlaying = true;
+  setStatus('PLAYING');
+  document.getElementById('btn-record').classList.remove('hidden');
+  animFrameId = requestAnimationFrame(renderFrame);
+}
+
+function pausePlayback() {
+  isPlaying = false;
+  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+  layers.forEach(v => v.pause());
+  setStatus('PAUSED');
+  document.getElementById('btn-record').classList.add('hidden');
+  if (isRecording) stopRecording();
+}
+
 // ============================================================
 // UI
 // ============================================================
@@ -521,6 +543,17 @@ canvasWrap.addEventListener('drop', e => {
   canvasWrap.style.outline = '';
   const file = e.dataTransfer.files[0];
   if (file) loadFile(file);
+});
+
+// --- Transport controls ---
+document.getElementById('btn-play').addEventListener('click', startPlayback);
+document.getElementById('btn-pause').addEventListener('click', pausePlayback);
+
+// --- Debug panel toggle ---
+document.getElementById('btn-debug').addEventListener('click', () => {
+  const panel = document.getElementById('debug-panel');
+  panel.classList.toggle('visible');
+  document.getElementById('btn-debug').classList.toggle('active');
 });
 </script>
 </body>

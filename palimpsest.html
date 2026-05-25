@@ -638,6 +638,16 @@ document.getElementById('btn-record').addEventListener('click', () => {
   if (isRecording) stopRecording();
   else startRecording();
 });
+
+// Initial canvas sizing
+canvas.width  = canvasWrap.clientWidth;
+canvas.height = canvasWrap.clientHeight;
+
+// Resize handler
+window.addEventListener('resize', () => {
+  canvas.width  = canvasWrap.clientWidth;
+  canvas.height = canvasWrap.clientHeight;
+});
 </script>
 </body>
 </html>

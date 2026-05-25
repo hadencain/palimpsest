@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PALIMPSEST.EXE</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #080808;
+  color: #d0d0d0;
+  font-family: 'Courier New', Courier, monospace;
+  overflow: hidden;
+}
+
+.app {
+  width: 100vw; height: 100vh;
+  display: grid;
+  grid-template-rows: 32px 1fr 60px 44px 32px;
+}
+
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid #1c1c1c;
+}
+.title { font-size: 11px; letter-spacing: 0.22em; color: #fff; text-transform: uppercase; }
+.status { font-size: 10px; letter-spacing: 0.12em; color: #444; }
+.status span { color: #888; }
+
+/* Canvas */
+.canvas-wrap {
+  position: relative;
+  background: #0e0e0e;
+  border-bottom: 1px solid #161616;
+  overflow: hidden;
+}
+canvas { display: block; width: 100%; height: 100%; }
+.canvas-hint {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #1e1e1e;
+  pointer-events: none;
+}
+.layer-stack {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ltag {
+  font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 2px 6px; border: 1px solid;
+}
+.ltag.p2 { color: #2a2a2a; border-color: #222; }
+.ltag.p1 { color: #444;    border-color: #333; }
+.ltag.now{ color: #bbb;    border-color: #777; }
+.ltag.f1 { color: #444;    border-color: #333; }
+.ltag.f2 { color: #2a2a2a; border-color: #222; }
+.timecode {
+  position: absolute; bottom: 10px; left: 12px;
+  font-size: 10px; letter-spacing: 0.12em; color: #333;
+}
+.transport {
+  position: absolute; bottom: 8px; right: 12px;
+  display: flex; gap: 6px;
+}
+
+/* Visualizer */
+.viz {
+  display: flex;
+  border-bottom: 1px solid #161616;
+  background: #0a0a0a;
+}
+.viz-col {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding: 4px 0 6px; gap: 4px;
+  border-right: 1px solid #111;
+  position: relative;
+}
+.viz-col:last-child { border-right: none; }
+.bar-track { flex: 1; width: 50%; display: flex; align-items: flex-end; }
+.bar { width: 100%; background: #2a2a2a; transition: height 0.05s; }
+.bar.now { background: #777; }
+.now-floor {
+  position: absolute; left: 25%; right: 25%; height: 1px;
+  background: rgba(255,255,255,0.35);
+}
+.vlabel { font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: #333; }
+.vlabel.now { color: #777; }
+
+/* Controls */
+.controls {
+  display: flex; align-items: center;
+  border-bottom: 1px solid #161616;
+  background: #090909;
+}
+.ctrl {
+  flex: 1; display: flex; align-items: center; gap: 10px;
+  padding: 0 14px; height: 100%;
+  border-right: 1px solid #161616;
+}
+.ctrl:last-child { border-right: none; }
+.ctrl-label { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: #3a3a3a; white-space: nowrap; }
+.ctrl-value { font-size: 14px; color: #bbb; min-width: 38px; text-align: right; }
+.ctrl-range {
+  flex: 1; height: 2px; -webkit-appearance: none;
+  background: #222; outline: none; cursor: pointer;
+}
+.ctrl-range::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 7px; height: 7px;
+  background: #777; cursor: pointer; border-radius: 0;
+}
+
+/* Footer */
+.footer {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 12px; background: #070707;
+}
+.fsep { flex: 1; }
+
+/* Buttons */
+.btn {
+  background: none; border: 1px solid #1e1e1e; color: #444;
+  font-family: inherit; font-size: 9px; letter-spacing: 0.14em;
+  padding: 3px 10px; cursor: pointer; text-transform: uppercase;
+}
+.btn:hover { border-color: #444; color: #aaa; }
+.btn.active { border-color: #666; color: #ccc; background: #141414; }
+.btn.record-active { border-color: #888; color: #fff; }
+.btn.hidden { display: none; }
+
+/* Debug panel */
+.debug {
+  position: fixed; bottom: 32px; left: 0; right: 0;
+  background: rgba(8,8,8,0.94); border-top: 1px solid #1c1c1c;
+  display: none; flex-direction: row;
+  padding: 6px 16px; gap: 0;
+}
+.debug.visible { display: flex; }
+.debug-col {
+  flex: 1; display: flex; flex-direction: column; gap: 2px;
+  border-right: 1px solid #151515; padding: 0 12px;
+}
+.debug-col:first-child { padding-left: 0; }
+.debug-col:last-child { border-right: none; }
+.dlabel { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: #2a2a2a; }
+.dlabel.now { color: #666; }
+.dval { font-size: 9px; letter-spacing: 0.08em; color: #444; }
+.dval.now { color: #777; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="title">PALIMPSEST.EXE</div>
+    <div class="status" id="status">
+      T = <span id="s-offset">1.0s</span> &nbsp;|&nbsp;
+      LAYERS: <span id="s-layers">5</span> &nbsp;|&nbsp;
+      <span id="s-state">READY</span>
+    </div>
+  </div>
+
+  <div class="canvas-wrap" id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="canvas-hint" id="canvas-hint">DROP VIDEO FILE TO BEGIN</div>
+    <div class="layer-stack">
+      <div class="ltag f2">FUT-2</div>
+      <div class="ltag f1">FUT-1</div>
+      <div class="ltag now">NOW</div>
+      <div class="ltag p1">PAST-1</div>
+      <div class="ltag p2">PAST-2</div>
+    </div>
+    <div class="timecode" id="timecode">--:--.-</div>
+    <div class="transport">
+      <button class="btn" id="btn-play">&#9654; PLAY</button>
+      <button class="btn" id="btn-pause">&#9646;&#9646; PAUSE</button>
+    </div>
+  </div>
+
+  <div class="viz" id="viz">
+    <div class="viz-col">
+      <div class="bar-track"><div class="bar" id="bar-0" style="height:0%"></div></div>
+      <div class="vlabel">PAST-2</div>
+    </div>
+    <div class="viz-col">
+      <div class="bar-track"><div class="bar" id="bar-1" style="height:0%"></div></div>
+      <div class="vlabel">PAST-1</div>
+    </div>
+    <div class="viz-col">
+      <div class="bar-track"><div class="bar now" id="bar-2" style="height:30%"></div></div>
+      <div class="now-floor" id="now-floor" style="bottom: calc(6px + 12px + 30%)"></div>
+      <div class="vlabel now">NOW</div>
+    </div>
+    <div class="viz-col">
+      <div class="bar-track"><div class="bar" id="bar-3" style="height:0%"></div></div>
+      <div class="vlabel">FUT-1</div>
+    </div>
+    <div class="viz-col">
+      <div class="bar-track"><div class="bar" id="bar-4" style="height:0%"></div></div>
+      <div class="vlabel">FUT-2</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl">
+      <div class="ctrl-label">Temporal Offset</div>
+      <div class="ctrl-value" id="val-offset">1.0s</div>
+      <input type="range" class="ctrl-range" id="ctrl-offset" min="1" max="50" value="10">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-label">Present Floor</div>
+      <div class="ctrl-value" id="val-floor">0.30</div>
+      <input type="range" class="ctrl-range" id="ctrl-floor" min="0" max="100" value="30">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-label">FFT Smoothing</div>
+      <div class="ctrl-value" id="val-smooth">0.85</div>
+      <input type="range" class="ctrl-range" id="ctrl-smooth" min="0" max="95" value="85">
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-label">Layers</div>
+      <div class="ctrl-value" id="val-layers">5</div>
+      <input type="range" class="ctrl-range" id="ctrl-layers" min="0" max="1" step="1" value="1">
+    </div>
+  </div>
+
+  <div class="footer">
+    <button class="btn active" id="btn-load">LOAD FILE</button>
+    <div class="fsep"></div>
+    <button class="btn hidden" id="btn-record">&#9679; RECORD</button>
+    <button class="btn hidden" id="btn-export">EXPORT</button>
+    <button class="btn" id="btn-debug">DEBUG</button>
+  </div>
+
+</div>
+
+<div class="debug" id="debug-panel">
+  <div class="debug-col">
+    <div class="dlabel">PAST-2</div>
+    <div class="dval" id="dbg-t-0">t: —</div>
+    <div class="dval" id="dbg-a-0">α: 0.00</div>
+  </div>
+  <div class="debug-col">
+    <div class="dlabel">PAST-1</div>
+    <div class="dval" id="dbg-t-1">t: —</div>
+    <div class="dval" id="dbg-a-1">α: 0.00</div>
+  </div>
+  <div class="debug-col">
+    <div class="dlabel now">NOW</div>
+    <div class="dval now" id="dbg-t-2">t: —</div>
+    <div class="dval now" id="dbg-a-2">α: 0.30</div>
+  </div>
+  <div class="debug-col">
+    <div class="dlabel">FUT-1</div>
+    <div class="dval" id="dbg-t-3">t: —</div>
+    <div class="dval" id="dbg-a-3">α: 0.00</div>
+  </div>
+  <div class="debug-col">
+    <div class="dlabel">FUT-2</div>
+    <div class="dval" id="dbg-t-4">t: —</div>
+    <div class="dval" id="dbg-a-4">α: 0.00</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+
+// ============================================================
+// ENGINE
+// ============================================================
+
+// ============================================================
+// UI
+// ============================================================
+</script>
+</body>
+</html>

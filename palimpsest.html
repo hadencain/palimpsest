@@ -511,6 +511,52 @@ function pausePlayback() {
   if (isRecording) stopRecording();
 }
 
+function startRecording() {
+  if (isRecording || !isPlaying) return;
+
+  // Mix canvas video stream with audio
+  const videoStream = canvas.captureStream(30);
+  const audioStream = recordDest.stream;
+  const combined = new MediaStream([
+    ...videoStream.getVideoTracks(),
+    ...audioStream.getAudioTracks(),
+  ]);
+
+  recordChunks = [];
+  mediaRecorder = new MediaRecorder(combined, { mimeType: 'video/webm' });
+
+  mediaRecorder.ondataavailable = e => {
+    if (e.data.size > 0) recordChunks.push(e.data);
+  };
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordChunks, { type: 'video/webm' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `palimpsest-${Date.now()}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  mediaRecorder.start();
+  isRecording = true;
+
+  const btn = document.getElementById('btn-record');
+  btn.innerHTML = '&#9646;&#9646; STOP REC';
+  btn.classList.add('record-active');
+}
+
+function stopRecording() {
+  if (!isRecording) return;
+  mediaRecorder.stop();
+  isRecording = false;
+
+  const btn = document.getElementById('btn-record');
+  btn.innerHTML = '&#9679; RECORD';
+  btn.classList.remove('record-active');
+}
+
 // ============================================================
 // UI
 // ============================================================
@@ -583,6 +629,12 @@ document.getElementById('ctrl-layers').addEventListener('input', function() {
   layerCount = this.value === '1' ? 5 : 3;
   document.getElementById('val-layers').textContent = `${layerCount}`;
   document.getElementById('s-layers').textContent   = `${layerCount}`;
+});
+
+// --- Record button ---
+document.getElementById('btn-record').addEventListener('click', () => {
+  if (isRecording) stopRecording();
+  else startRecording();
 });
 </script>
 </body>

@@ -331,9 +331,6 @@ function setupLayers(src) {
   // Once metadata loads on layer 2, store duration
   layers[2].addEventListener('loadedmetadata', () => {
     duration = layers[2].duration;
-    // Size canvas to video's natural dimensions
-    canvas.width  = layers[2].videoWidth  || canvasWrap.clientWidth;
-    canvas.height = layers[2].videoHeight || canvasWrap.clientHeight;
   }, { once: true });
 }
 

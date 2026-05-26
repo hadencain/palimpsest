@@ -102,6 +102,7 @@ canvas { display: block; width: 100%; height: 100%; }
   border-right: 1px solid #161616;
 }
 .ctrl:last-child { border-right: none; }
+.ctrl.disabled { opacity: 0.35; pointer-events: none; }
 .ctrl-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #888; white-space: nowrap; }
 .ctrl-value { font-size: 14px; color: #fff; min-width: 38px; text-align: right; }
 .ctrl-range {
@@ -233,6 +234,7 @@ canvas { display: block; width: 100%; height: 100%; }
     <div class="fsep"></div>
     <button class="btn hidden" id="btn-record">&#9679; RECORD</button>
     <button class="btn hidden" id="btn-export">EXPORT</button>
+    <button class="btn" id="btn-ar">AR</button>
     <button class="btn" id="btn-debug">DEBUG</button>
   </div>
 
@@ -282,6 +284,7 @@ let frameCount  = 0;
 let animFrameId = null;
 let isPlaying   = false;
 let loopMode    = false;
+let arMode      = false;
 
 // Recording
 let isRecording  = false;
@@ -651,6 +654,19 @@ document.getElementById('btn-record').addEventListener('click', () => {
 document.getElementById('btn-loop').addEventListener('click', () => {
   loopMode = !loopMode;
   document.getElementById('btn-loop').classList.toggle('active', loopMode);
+});
+
+// --- AR mode toggle ---
+document.getElementById('btn-ar').addEventListener('click', () => {
+  arMode = !arMode;
+  document.getElementById('btn-ar').classList.toggle('active', arMode);
+  document.querySelectorAll('.ctrl').forEach(el => {
+    el.classList.toggle('disabled', arMode);
+  });
+  if (!arMode) {
+    // Restore all layer playback rates to 1.0 when leaving AR mode
+    layers.forEach(v => { if (v) v.playbackRate = 1.0; });
+  }
 });
 
 // Initial canvas sizing

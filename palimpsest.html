@@ -345,6 +345,14 @@ function loadFile(file) {
   const src = URL.createObjectURL(file);
   setupLayers(src);
 
+  // Auto-exit AR mode on file load to prevent orphaned disabled state
+  if (arMode) {
+    arMode = false;
+    document.getElementById('btn-ar').classList.remove('active');
+    document.querySelectorAll('.ctrl').forEach(el => el.classList.remove('disabled'));
+    layers.forEach(v => { if (v) v.playbackRate = 1.0; });
+  }
+
   document.getElementById('canvas-hint').style.display = 'none';
   document.getElementById('btn-export').classList.remove('hidden');
   setStatus('LOADED');

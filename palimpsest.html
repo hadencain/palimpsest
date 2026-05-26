@@ -292,10 +292,14 @@ let mediaRecorder = null;
 let recordChunks  = [];
 
 // Audio
-let audioCtx   = null;
-let analyser   = null;
-let freqData   = null;
-let recordDest = null;
+let audioCtx    = null;
+let audioSource = null;
+let analyser    = null;
+let freqData    = null;
+let recordDest  = null;
+
+// File
+let currentSrcUrl = null;
 
 // Layers — 5 HTMLVideoElement instances, created in setupLayers()
 let layers = [];
@@ -342,19 +346,32 @@ function setupLayers(src) {
 function loadFile(file) {
   if (!file || !file.type.startsWith('video/')) return;
 
-  const src = URL.createObjectURL(file);
-  setupLayers(src);
+  // Tear down active playback and recording before replacing layers
+  if (isPlaying) pausePlayback();
+
+  // Close audio context so setupAudio() reinitializes against the new layers
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null; audioSource = null; analyser = null; freqData = null; recordDest = null;
+  }
+
+  // Revoke previous blob URL to free memory
+  if (currentSrcUrl) { URL.revokeObjectURL(currentSrcUrl); }
+  currentSrcUrl = URL.createObjectURL(file);
+  duration = 0;
+
+  setupLayers(currentSrcUrl);
 
   // Auto-exit AR mode on file load to prevent orphaned disabled state
   if (arMode) {
     arMode = false;
     document.getElementById('btn-ar').classList.remove('active');
     document.querySelectorAll('.ctrl').forEach(el => el.classList.remove('disabled'));
-    layers.forEach(v => { if (v) v.playbackRate = 1.0; });
   }
 
   document.getElementById('canvas-hint').style.display = 'none';
   document.getElementById('btn-export').classList.remove('hidden');
+  document.getElementById('btn-record').classList.add('hidden');
   setStatus('LOADED');
 }
 
@@ -466,8 +483,8 @@ function renderFrame() {
 
   ctx.globalAlpha = 1.0;
 
-  // Drift correction every 30 frames
-  if (frameCount % 30 === 0) syncLayers();
+  // Drift correction — every frame in AR mode (offset changes each frame), else every 30
+  if (arMode || frameCount % 30 === 0) syncLayers();
 
   // Update UI
   updateVisualizer(opacities, masterTime);
@@ -675,6 +692,12 @@ document.getElementById('ctrl-layers').addEventListener('input', function() {
 document.getElementById('btn-record').addEventListener('click', () => {
   if (isRecording) stopRecording();
   else startRecording();
+});
+
+// --- Export button: start playing + recording in one click ---
+document.getElementById('btn-export').addEventListener('click', () => {
+  if (!isPlaying) startPlayback();
+  startRecording();
 });
 
 // --- Loop toggle ---

@@ -429,6 +429,25 @@ function renderFrame() {
   // Pull frequency data
   if (analyser) analyser.getByteFrequencyData(freqData);
 
+  // AR mode — audio drives parameters each frame
+  if (arMode && analyser) {
+    temporalOffset = 0.5 + getBandEnergy(0, 10) * 4.5;
+    presentFloor   = getBandEnergy(11, 40);
+    const futRate  = 0.5 + getBandEnergy(101, 160) * 1.5;
+    const pastRate = 0.5 + getBandEnergy(161, 220) * 1.5;
+    if (layers[3]) layers[3].playbackRate = futRate;
+    if (layers[4]) layers[4].playbackRate = futRate;
+    if (layers[0]) layers[0].playbackRate = pastRate;
+    if (layers[1]) layers[1].playbackRate = pastRate;
+    // Update slider thumbs and value displays to show audio-driven values
+    const offsetSlider = document.getElementById('ctrl-offset');
+    if (offsetSlider) offsetSlider.value = temporalOffset * 10;
+    const floorSlider = document.getElementById('ctrl-floor');
+    if (floorSlider) floorSlider.value = presentFloor * 100;
+    document.getElementById('val-offset').textContent = `${temporalOffset.toFixed(1)}s`;
+    document.getElementById('val-floor').textContent  = presentFloor.toFixed(2);
+  }
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const active = getActiveLayers();

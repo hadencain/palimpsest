@@ -229,6 +229,7 @@ canvas { display: block; width: 100%; height: 100%; }
 
   <div class="footer">
     <button class="btn active" id="btn-load">LOAD FILE</button>
+    <button class="btn" id="btn-loop">LOOP</button>
     <div class="fsep"></div>
     <button class="btn hidden" id="btn-record">&#9679; RECORD</button>
     <button class="btn hidden" id="btn-export">EXPORT</button>
@@ -280,6 +281,7 @@ let duration    = 0;
 let frameCount  = 0;
 let animFrameId = null;
 let isPlaying   = false;
+let loopMode    = false;
 
 // Recording
 let isRecording  = false;
@@ -443,9 +445,18 @@ function renderFrame() {
 
   // End condition
   if (masterTime >= duration && duration > 0) {
-    pausePlayback();
-    setStatus('DONE');
-    return;
+    if (loopMode) {
+      const active = getActiveLayers();
+      active.forEach(({ i, offset }) => {
+        if (i === 2) return;
+        layers[i].currentTime = Math.max(0, Math.min(offset, duration));
+      });
+      layers[2].currentTime = 0;
+    } else {
+      pausePlayback();
+      setStatus('DONE');
+      return;
+    }
   }
 
   animFrameId = requestAnimationFrame(renderFrame);
@@ -634,6 +645,12 @@ document.getElementById('ctrl-layers').addEventListener('input', function() {
 document.getElementById('btn-record').addEventListener('click', () => {
   if (isRecording) stopRecording();
   else startRecording();
+});
+
+// --- Loop toggle ---
+document.getElementById('btn-loop').addEventListener('click', () => {
+  loopMode = !loopMode;
+  document.getElementById('btn-loop').classList.toggle('active', loopMode);
 });
 
 // Initial canvas sizing

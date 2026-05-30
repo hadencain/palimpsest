@@ -286,6 +286,10 @@ let isPlaying   = false;
 let loopMode    = false;
 let arMode      = false;
 
+// Video dimensions (set on loadedmetadata)
+let videoNativeW = 0;
+let videoNativeH = 0;
+
 // Recording
 let isRecording  = false;
 let mediaRecorder = null;
@@ -337,9 +341,12 @@ function setupLayers(src) {
   // Only the present layer (index 2) produces audio
   layers[2].muted = false;
 
-  // Once metadata loads on layer 2, store duration
+  // Once metadata loads on layer 2, store duration and apply aspect ratio
   layers[2].addEventListener('loadedmetadata', () => {
-    duration = layers[2].duration;
+    duration     = layers[2].duration;
+    videoNativeW = layers[2].videoWidth;
+    videoNativeH = layers[2].videoHeight;
+    applyVideoAspect();
   }, { once: true });
 }
 
@@ -359,6 +366,10 @@ function loadFile(file) {
   if (currentSrcUrl) { URL.revokeObjectURL(currentSrcUrl); }
   currentSrcUrl = URL.createObjectURL(file);
   duration = 0;
+  videoNativeW = 0;
+  videoNativeH = 0;
+  canvasWrap.style.width       = '';
+  canvasWrap.style.justifySelf = '';
 
   setupLayers(currentSrcUrl);
 
@@ -614,6 +625,20 @@ function stopRecording() {
   btn.classList.remove('record-active');
 }
 
+function applyVideoAspect() {
+  if (!videoNativeW || !videoNativeH) return;
+  if (videoNativeH > videoNativeW) {
+    // Portrait: constrain wrap width to maintain video AR within available height
+    const availH = canvasWrap.offsetHeight || (window.innerHeight - 168);
+    const w = Math.floor(availH * (videoNativeW / videoNativeH));
+    canvasWrap.style.width       = `${w}px`;
+    canvasWrap.style.justifySelf = 'center';
+  } else {
+    canvasWrap.style.width       = '';
+    canvasWrap.style.justifySelf = '';
+  }
+}
+
 // ============================================================
 // UI
 // ============================================================
@@ -725,6 +750,7 @@ canvas.height = canvasWrap.clientHeight;
 
 // Resize handler
 window.addEventListener('resize', () => {
+  applyVideoAspect();
   canvas.width  = canvasWrap.clientWidth;
   canvas.height = canvasWrap.clientHeight;
 });
